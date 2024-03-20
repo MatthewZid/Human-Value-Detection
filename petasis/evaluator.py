@@ -19,7 +19,19 @@ argparser.add_argument(
         help="Directory to which the 'evaluation.prototext' will be written: will be created if it does not exist")
 args = argparser.parse_args()
 
-availableValues = [ "Self-direction: thought", "Self-direction: action", "Stimulation", "Hedonism", "Achievement", "Power: dominance", "Power: resources", "Face", "Security: personal", "Security: societal", "Tradition", "Conformity: rules", "Conformity: interpersonal", "Humility", "Benevolence: caring", "Benevolence: dependability", "Universalism: concern", "Universalism: nature", "Universalism: tolerance", "Universalism: objectivity" ]
+# availableValues = [ "Self-direction: thought", "Self-direction: action", "Stimulation", "Hedonism", "Achievement", "Power: dominance", "Power: resources", "Face", "Security: personal", "Security: societal", "Tradition", "Conformity: rules", "Conformity: interpersonal", "Humility", "Benevolence: caring", "Benevolence: dependability", "Universalism: concern", "Universalism: nature", "Universalism: tolerance", "Universalism: objectivity" ]
+availableValues24 = [
+    "Self-direction: thought attained", "Self-direction: thought constrained", "Self-direction: action attained", "Self-direction: action constrained", 
+    "Stimulation attained", "Stimulation constrained", "Hedonism attained", "Hedonism constrained", "Achievement attained", "Achievement constrained", 
+    "Power: dominance attained", "Power: dominance constrained", "Power: resources attained", "Power: resources constrained", "Face attained", "Face constrained",
+    "Security: personal attained", "Security: personal constrained", "Security: societal attained", "Security: societal constrained", "Tradition attained",
+    "Tradition constrained", "Conformity: rules attained", "Conformity: rules constrained", "Conformity: interpersonal attained", "Conformity: interpersonal constrained",
+    "Humility attained", "Humility constrained", "Benevolence: caring attained", "Benevolence: caring constrained", "Benevolence: dependability attained",
+    "Benevolence: dependability constrained", "Universalism: concern attained", "Universalism: concern constrained", "Universalism: nature attained",
+    "Universalism: nature constrained", "Universalism: tolerance attained", "Universalism: tolerance constrained"
+]
+
+availableMetadata = ['Text-ID', 'Sentence-ID']
 
 def readLabels(directory, prefix = None, availableArgumentIds = None):
     labels = {}
@@ -30,13 +42,13 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
                 with open(labelsFileName, "r", newline='') as labelsFile:
                     print("Reading " + labelsFileName)
                     reader = csv.DictReader(labelsFile, delimiter = "\t")
-                    if "Argument ID" not in reader.fieldnames:
-                        print("Skipping file " + labelsFileName + " due to missing field 'Argument ID'")
+                    if "Text-ID" not in reader.fieldnames or "Sentence-ID" not in reader.fieldnames:
+                        print("Skipping file " + labelsFileName + " due to missing fields 'Text-ID'/'Sentence-ID'")
                         continue
                     invalidFieldNames = False
                     for fieldName in reader.fieldnames:
-                        if fieldName != "Argument ID" and fieldName not in availableValues:
-                            print("Skipping file " + labelsFileName + " due to invalid field '" + fieldName + "'; available field names: " + str(availableValues))
+                        if fieldName not in availableMetadata and fieldName not in availableValues24:
+                            print("Skipping file " + labelsFileName + " due to invalid field '" + fieldName + "'; available field names: " + str(availableValues24))
                             invalidFieldNames = True
                     if invalidFieldNames:
                         continue
@@ -44,16 +56,21 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
                     lineNumber = 1
                     for row in reader:
                         lineNumber += 1
-                        argumentId = row["Argument ID"]
-                        if availableArgumentIds != None and argumentId not in availableArgumentIds:
-                            print("Skipping line " + str(lineNumber) + " due to unknown Argument ID '" + argumentId + "'")
+                        textId = row["Text-ID"]
+                        if availableArgumentIds != None and textId not in availableArgumentIds:
+                            print("Skipping line " + str(lineNumber) + " due to unknown Text-ID '" + textId + "'")
                             continue
-                        del row["Argument ID"]
+                        del row["Text-ID"]
+                        sentenceId = row["Sentence-ID"]
+                        if availableArgumentIds != None and sentenceId not in availableArgumentIds:
+                            print("Skipping line " + str(lineNumber) + " due to unknown Sentence-ID '" + sentenceId + "'")
+                            continue
+                        del row["Sentence-ID"]
                         for label in row.values():
-                            if label != "0" and label != "1":
+                            if label != "0.0" and label != "1.0":
                                 print("Skipping line " + str(lineNumber) + " due to invalid label '" + label + "'")
                                 continue
-                        labels[argumentId] = row
+                        labels[textId] = row
     if len(labels) == 0:
         if prefix == None:
             raise OSError("No labels found in directory '" + directory + "'")
@@ -63,7 +80,7 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
 
 def initializeCounter():
     counter = {}
-    for value in availableValues:
+    for value in availableValues24:
         counter[value] = 0
     return counter
 
@@ -95,7 +112,7 @@ def writeEvaluation(truthLabels, runLabels, outputDataset):
         precisions = []
         recalls = []
         fmeasures = []
-        for value in availableValues:
+        for value in availableValues24:
             if relevants[value] != 0:
                 precision = 0
                 if positives[value] != 0:
@@ -115,8 +132,8 @@ def writeEvaluation(truthLabels, runLabels, outputDataset):
         evaluationFile.write("measure {\n key: \"Precision\"\n value: \"" + str(precision) + "\"\n}\n")
         evaluationFile.write("measure {\n key: \"Recall\"\n value: \"" + str(recall) + "\"\n}\n")
         skippedValues = 0
-        for v in range(len(availableValues)):
-            value = availableValues[v]
+        for v in range(len(availableValues24)):
+            value = availableValues24[v]
             if relevants[value] == 0:
                 skippedValues += 1
             else:

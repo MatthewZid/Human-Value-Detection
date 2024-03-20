@@ -34,6 +34,35 @@ def show_memory(text=''):
 
 dataLabels = ['Argument ID', 'Conclusion', 'Stance', 'Premise', '__index_level_0__', 'P+S', 'C+S', 'P+C', 'P+S+C', 'stance_boolean']
 
+data24Labels = ["Text-ID", "Sentence-ID", "Text", "__index_level_0__"]
+
+def getData24(datadir):
+    df_args = pd.read_csv(datadir + '/training/sentences.tsv', sep = '\t')
+    df_lbls = pd.read_table(datadir + '/training/labels.tsv')
+    dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
+    df_lbls = df_lbls.drop(dropindex)
+    df_args = df_args.drop(dropindex)
+    df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    # df_lbls = pd.concat([df_lbls['Text-ID'], df_lbls['Sentence-ID'], df_lbls.drop(['Text-ID','Sentence-ID'],axis=1).astype(int)], axis=1)
+    df_train = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
+
+    df_args = pd.read_csv(datadir + '/validation/sentences.tsv', sep = '\t')
+    df_lbls = pd.read_table(datadir + '/validation/labels.tsv')
+    dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
+    df_lbls = df_lbls.drop(dropindex)
+    df_args = df_args.drop(dropindex)
+    df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_validation = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
+    #print(df_validation[['Argument ID', "stance_boolean", "Stance"]].to_string())
+    #exit(0)
+
+    df_test = pd.read_table(datadir + '/test/sentences.tsv')
+    df_test = df_test[df_test['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+
+    return df_train, df_validation, df_test
+
 
 def getData(datadir):
     df_args = pd.read_csv(datadir + '/arguments-training.tsv', sep = '\t')
@@ -83,36 +112,36 @@ def getDatasets(df_train, df_validation, df_test):
 
 def preprocess_data(examples, labels, tokenizer, max_length=200, task_ids=[0], sent1="C+S", sent2="Premise"):
     # take a batch of texts
-    if sent1 in examples:
-        sentA = examples[sent1]
-    else:
-        raise Exception("encodeDataset: wrong paramater for sent1, value not a column in the data.")
+    # if sent1 in examples:
+    #     sentA = examples[sent1]
+    # else:
+    #     raise Exception("encodeDataset: wrong paramater for sent1, value not a column in the data.")
 
-    # conclusion = examples["Conclusion"]
-    if sent2 in examples:
-        sentB = examples[sent2]
-    else:
-        sentB = None
+    # # conclusion = examples["Conclusion"]
+    # if sent2 in examples:
+    #     sentB = examples[sent2]
+    # else:
+    #     sentB = None
     # stance     = examples["Stance"]
     # encode them
-    encoding = tokenizer(sentA, sentB, padding="max_length", truncation=True, max_length=max_length)
+    encoding = tokenizer(examples['Text'], padding="max_length", truncation=True, max_length=max_length)
     # add labels
     labels_batch = {k: examples[k] for k in examples.keys() if k in labels}
     # Test may not have labels...
     if (len(labels_batch)):
         # create numpy array of shape (batch_size, num_labels)
-        labels_matrix = np.zeros((len(sentA), len(labels)))
+        labels_matrix = np.zeros((len(examples[labels[0]]), len(labels)))
         # fill numpy array
         for idx, label in enumerate(labels):
             labels_matrix[:, idx] = labels_batch[label]
 
         encoding["labels"] = labels_matrix.tolist()
     else:
-        labels_matrix = np.zeros((len(sentA), len(labels)))
+        labels_matrix = np.zeros((len(examples['Text']), len(labels)))
         encoding["labels"] = labels_matrix.tolist()
     # Is it a multitask run?
-    if len(task_ids) > 0:
-        encoding["labels_stance"] = examples["stance_boolean"]  # Interpreted as class indices...
+    # if len(task_ids) > 0:
+    #     encoding["labels_stance"] = examples["stance_boolean"]  # Interpreted as class indices...
     encoding["task_ids"] = [task_ids] * len(encoding["labels"])
 
     return encoding
@@ -177,7 +206,9 @@ def compute_positive_weights(df, labels):
     return torch.from_numpy(np.array(pos_weights))
 
 
-def remove_noisy_examples(df, labels, classes=["Universalism: concern", "Security: personal", "Security: societal"]):
+def remove_noisy_examples(df, labels, classes=["Universalism: concern attained","Universalism: concern contrained",
+                                               "Security: personal attained","Security: personal contrained", "Security: societal attained",
+                                               "Security: societal contrained"]):
     # Examine classes in decreasing frequency...
     if classes is None:
         counter = Counter()
@@ -241,10 +272,10 @@ def save_eval_results(predictions, labels=[], evaluationResultsDir="evaluationRe
     if not os.path.exists(evaluationResultsDir):
         os.makedirs(evaluationResultsDir)
     with open(os.path.join(evaluationResultsDir, evaluationResultsFilename), "w") as runFile:
-        writer = csv.DictWriter(runFile, fieldnames=["Argument ID"] + labels, delimiter="\t")
+        writer = csv.DictWriter(runFile, fieldnames=["Text-ID", "Sentence-ID"] + labels, delimiter="\t")
         writer.writeheader()
         for index, row in save_eval_result_df.iterrows():
-            r = {"Argument ID": row[0]}
+            r = {"Text-ID": row[0], "Sentence-ID": row[1]}
             i = 0
             for lbl in labels:
                 r[lbl] = int(predictions[index][i])

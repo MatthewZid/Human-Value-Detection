@@ -34,7 +34,8 @@ learning_rate         = 2e-5
 # learning_rate         = 3e-3
 batch_size            = 8
 metric_name           = "f1"
-num_train_epochs      = 32
+# num_train_epochs      = 32
+num_train_epochs      = 1
 use_data_augmentation = False
 include_validation_for_train = False
 use_class_weights     = False
@@ -47,7 +48,8 @@ output_dir            = f"runs/mt-{pretrained_model_name}-{num_train_epochs}-{ba
 best_output_dir       = f"runs/mt-best-{pretrained_model_name}-{num_train_epochs}-{batch_size}-{metric_name}"
 tensorboard_dir       = f"runs/mt-tb-{pretrained_model_name}-{num_train_epochs}-{batch_size}-{metric_name}"
 hperparam_search_name = f"runs/mt-std-{pretrained_model_name}-{num_train_epochs}-{batch_size}-{metric_name}"
-Sentence1             = 'P+S+C'
+# Sentence1             = 'P+S+C'
+Sentence1             = 'Text'
 Sentence2             = None
 
 common.setSeeds(seed)
@@ -55,8 +57,8 @@ common.setSeeds(seed)
 # from transformers import AutoModelForSequenceClassification
 
 # Read dataset...
-datadir = '../Data'
-df_train, df_validation, df_test = common.getData(datadir)
+datadir = '../Data24'
+df_train, df_validation, df_test = common.getData24(datadir)
 
 # Add validation to training...
 if include_validation_for_train:
@@ -77,16 +79,17 @@ if use_data_augmentation:
         #print(tmp_aug.at[i,'P+S+C'])
         if i % 100 == 0:
             print(i)
-        new_text=aug.augment(tmp_aug.at[i,'P+S+C'])
+        new_text=aug.augment(tmp_aug.at[i,Sentence1])
         j=0
         #for j in range(0,2):
-        tmp_aug.at[i,'P+S+C'] = str(new_text[j])
+        tmp_aug.at[i,Sentence1] = str(new_text[j])
     df_train = pd.concat([df_train, tmp_aug], ignore_index=True)
     df_train = df_train.sample(frac=1)
 
 # Get dataset labels...
 #labels = [label for label in dataset['train'].features.keys() if label not in common.dataLabels]
-labels = [label for label in df_train.columns if label not in common.dataLabels]
+# labels = [label for label in df_train.columns if label not in common.dataLabels]
+labels = [label for label in df_train.columns if label not in common.data24Labels]
 id2label = {idx:label for idx, label in enumerate(labels)}
 label2id = {label:idx for idx, label in enumerate(labels)}
 # print("Labels:", len(labels), labels)
@@ -317,5 +320,3 @@ if perform_test:
     common.evaluationResultsFilename = "test.tsv"
     results = trainer.predict(encoded_dataset["test"])
     common.save_eval_result_df = None
-
-

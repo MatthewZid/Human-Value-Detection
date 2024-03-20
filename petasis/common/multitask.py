@@ -7,6 +7,7 @@ from transformers import AutoModel
 import torch
 from torchvision.ops.focal_loss import sigmoid_focal_loss
 from torchinfo import summary
+import math
 
 @dataclass
 class TaskLayer:
@@ -37,10 +38,10 @@ class Task:
     loss: str = None
     loss_reduction: str = "mean" # mean, sum, none...
     loss_reduction_weight: float = None
-    loss_pos_weight: [float] = None
-    loss_class_weight: [float] = None
+    loss_pos_weight: List[float] = None
+    loss_class_weight: List[float] = None
     labels: str = "labels"
-    task_layers: [TaskLayer] = None
+    task_layers: List[TaskLayer] = None
 
 class MultiTaskModel(nn.Module):
     def __init__(self, encoder_name_or_path, tasks: List):

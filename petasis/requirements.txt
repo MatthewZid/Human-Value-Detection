@@ -1,5 +1,5 @@
 torch
-transformers
+transformers==4.33.0
 datasets
 pandas
 scikit-learn
@@ -11,4 +11,6 @@ tensorboard
 tensorboardX
 matplotlib
 matplotlib-venn
-pretty-confusion-matrix
+# pretty-confusion-matrix
+nlpaug
+torchvision
