@@ -130,7 +130,7 @@ def preprocess_data(examples, labels, tokenizer, max_length=200, task_ids=[0], s
     # Test may not have labels...
     if (len(labels_batch)):
         # create numpy array of shape (batch_size, num_labels)
-        labels_matrix = np.zeros((len(examples[labels[0]]), len(labels)))
+        labels_matrix = np.zeros((len(examples['Text']), len(labels)))
         # fill numpy array
         for idx, label in enumerate(labels):
             labels_matrix[:, idx] = labels_batch[label]
@@ -389,6 +389,7 @@ def compute_metrics(p: EvalPrediction, labels=[], tasks=None, writer=None):
     #         tuple) else p.label_ids
     # print("p.predictions:", p.predictions, len(p.predictions), type(p.predictions), type(p.predictions[0]), type(p.predictions[1]))
     # print("preds:", preds, type(preds))
+    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa')
     result = multi_label_metrics(
         predictions=p.predictions,
         true_labels=p.label_ids,
