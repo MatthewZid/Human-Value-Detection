@@ -87,7 +87,7 @@ class MultiTaskModel(nn.Module):
         head_mask=None,
         inputs_embeds=None,
         labels=None,
-        labels_stance=None,
+        # labels_stance=None,
         task_ids=None,
         **kwargs,
     ):
@@ -124,11 +124,11 @@ class MultiTaskModel(nn.Module):
         logits_list = []
         for unique_task_id in unique_task_ids_list:
             task_labels = labels
-            match self.labels_name[str(unique_task_id)]:
-                case "labels_stance":
-                    task_labels = labels_stance
-                case _:
-                    task_labels = labels
+            # match self.labels_name[str(unique_task_id)]:
+            #     case "labels_stance":
+            #         task_labels = labels_stance
+            #     case _:
+            #         task_labels = labels
 
             if task_ids is None:
                 task_logits, task_loss = self.output_heads[str(unique_task_id)].forward(
