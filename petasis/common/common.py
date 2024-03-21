@@ -42,8 +42,11 @@ def getData24(datadir):
     dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
     df_lbls = df_lbls.drop(dropindex)
     df_args = df_args.drop(dropindex)
+    df_lbls = df_lbls.astype({c: 'int' for c in list(df_lbls.columns) if c not in data24Labels})
     df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_args = df_args.reset_index(drop=True)
+    df_lbls = df_lbls.reset_index(drop=True)
     # df_lbls = pd.concat([df_lbls['Text-ID'], df_lbls['Sentence-ID'], df_lbls.drop(['Text-ID','Sentence-ID'],axis=1).astype(int)], axis=1)
     df_train = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
 
@@ -52,14 +55,18 @@ def getData24(datadir):
     dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
     df_lbls = df_lbls.drop(dropindex)
     df_args = df_args.drop(dropindex)
+    df_lbls = df_lbls.astype({c: 'int' for c in list(df_lbls.columns) if c not in data24Labels})
     df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_args = df_args.reset_index(drop=True)
+    df_lbls = df_lbls.reset_index(drop=True)
     df_validation = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
     #print(df_validation[['Argument ID', "stance_boolean", "Stance"]].to_string())
     #exit(0)
 
     df_test = pd.read_table(datadir + '/test/sentences.tsv')
     df_test = df_test[df_test['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
+    df_test = df_test.reset_index(drop=True)
 
     return df_train, df_validation, df_test
 
@@ -389,7 +396,6 @@ def compute_metrics(p: EvalPrediction, labels=[], tasks=None, writer=None):
     #         tuple) else p.label_ids
     # print("p.predictions:", p.predictions, len(p.predictions), type(p.predictions), type(p.predictions[0]), type(p.predictions[1]))
     # print("preds:", preds, type(preds))
-    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa')
     result = multi_label_metrics(
         predictions=p.predictions,
         true_labels=p.label_ids,
