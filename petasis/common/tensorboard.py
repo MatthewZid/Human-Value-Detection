@@ -57,7 +57,8 @@ class MTTensorBoardCallback(TensorBoardCallback):
         self.tb_writer.flush()
 
     def generate_cm_grid(self, mcm):
-        f, axes = plt.subplots(4, 5, figsize=(25, 15))
+        f, axes = plt.subplots(4, 5, figsize=(25, 15))  # subtask 1
+        # f, axes = plt.subplots(2, 19, figsize=(25, 15))   # subtask 2
         axes = axes.ravel()
         for i, cm in enumerate(mcm):
             disp = ConfusionMatrixDisplay(np.array(cm), display_labels=[0, i+1])

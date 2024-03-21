@@ -13,6 +13,7 @@ from collections import Counter
 import os
 import csv
 import math
+import re
 
 
 def setSeeds(seed=2022):
@@ -39,28 +40,41 @@ data24Labels = ["Text-ID", "Sentence-ID", "Text", "__index_level_0__"]
 def getData24(datadir):
     df_args = pd.read_csv(datadir + '/training/sentences.tsv', sep = '\t')
     df_lbls = pd.read_table(datadir + '/training/labels.tsv')
-    dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
-    df_lbls = df_lbls.drop(dropindex)
-    df_args = df_args.drop(dropindex)
+    # dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
+    # df_lbls = df_lbls.drop(dropindex)
+    # df_args = df_args.drop(dropindex)
     df_lbls = df_lbls.astype({c: 'int' for c in list(df_lbls.columns) if c not in data24Labels})
     df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_args = df_args.reset_index(drop=True)
     df_lbls = df_lbls.reset_index(drop=True)
+    subtask_df = df_lbls[["Text-ID", "Sentence-ID"]].copy()
+    subtask1_labels = []
+    for i in range(2, len(list(df_lbls.columns)), 2):
+        subtask1_labels.append(re.sub("\sattained", "", list(df_lbls.columns)[i]))
+    for label in subtask1_labels:
+        subtask_df[label] = df_lbls[[f"{label} attained", f"{label} constrained"]].sum(axis=1)
     # df_lbls = pd.concat([df_lbls['Text-ID'], df_lbls['Sentence-ID'], df_lbls.drop(['Text-ID','Sentence-ID'],axis=1).astype(int)], axis=1)
-    df_train = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
+    df_train = df_args.merge(subtask_df, how="left", on=["Text-ID","Sentence-ID"])
 
     df_args = pd.read_csv(datadir + '/validation/sentences.tsv', sep = '\t')
     df_lbls = pd.read_table(datadir + '/validation/labels.tsv')
-    dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
-    df_lbls = df_lbls.drop(dropindex)
-    df_args = df_args.drop(dropindex)
+    # dropindex = df_lbls[df_lbls.isin([0.5]).any(axis=1)].index
+    # df_lbls = df_lbls.drop(dropindex)
+    # df_args = df_args.drop(dropindex)
     df_lbls = df_lbls.astype({c: 'int' for c in list(df_lbls.columns) if c not in data24Labels})
     df_args = df_args[df_args['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_lbls = df_lbls[df_lbls['Text-ID'].str.split(pat='_',expand=True).iloc[:,0] == 'EN']
     df_args = df_args.reset_index(drop=True)
     df_lbls = df_lbls.reset_index(drop=True)
-    df_validation = df_args.merge(df_lbls, how="left", on=["Text-ID","Sentence-ID"])
+    subtask_df = df_lbls[["Text-ID", "Sentence-ID"]].copy()
+    subtask1_labels = []
+    for i in range(2, len(list(df_lbls.columns)), 2):
+        subtask1_labels.append(re.sub("\sattained", "", list(df_lbls.columns)[i]))
+    for label in subtask1_labels:
+        subtask_df[label] = df_lbls[[f"{label} attained", f"{label} constrained"]].sum(axis=1)
+    subtask_df.to_csv('evaluationLabels/labels-validation.tsv', index=False, sep='\t')
+    df_validation = df_args.merge(subtask_df, how="left", on=["Text-ID","Sentence-ID"])
     #print(df_validation[['Argument ID', "stance_boolean", "Stance"]].to_string())
     #exit(0)
 
@@ -119,32 +133,32 @@ def getDatasets(df_train, df_validation, df_test):
 
 def preprocess_data(examples, labels, tokenizer, max_length=200, task_ids=[0], sent1="C+S", sent2="Premise"):
     # take a batch of texts
-    # if sent1 in examples:
-    #     sentA = examples[sent1]
-    # else:
-    #     raise Exception("encodeDataset: wrong paramater for sent1, value not a column in the data.")
+    if sent1 in examples:
+        sentA = examples[sent1]
+    else:
+        raise Exception("encodeDataset: wrong paramater for sent1, value not a column in the data.")
 
-    # # conclusion = examples["Conclusion"]
-    # if sent2 in examples:
-    #     sentB = examples[sent2]
-    # else:
-    #     sentB = None
+    # conclusion = examples["Conclusion"]
+    if sent2 in examples:
+        sentB = examples[sent2]
+    else:
+        sentB = None
     # stance     = examples["Stance"]
     # encode them
-    encoding = tokenizer(examples['Text'], padding="max_length", truncation=True, max_length=max_length)
+    encoding = tokenizer(sentA, sentB, padding="max_length", truncation=True, max_length=max_length)
     # add labels
     labels_batch = {k: examples[k] for k in examples.keys() if k in labels}
     # Test may not have labels...
     if (len(labels_batch)):
         # create numpy array of shape (batch_size, num_labels)
-        labels_matrix = np.zeros((len(examples['Text']), len(labels)))
+        labels_matrix = np.zeros((len(sentA), len(labels)))
         # fill numpy array
         for idx, label in enumerate(labels):
             labels_matrix[:, idx] = labels_batch[label]
 
         encoding["labels"] = labels_matrix.tolist()
     else:
-        labels_matrix = np.zeros((len(examples['Text']), len(labels)))
+        labels_matrix = np.zeros((len(sentA), len(labels)))
         encoding["labels"] = labels_matrix.tolist()
     # Is it a multitask run?
     # if len(task_ids) > 0:
@@ -327,8 +341,8 @@ def multi_label_metrics_do(y_true, y_pred, labels=None, prefix="", per_class=Fal
 # source: https://jesusleal.io/2021/04/21/Longformer-multilabel-classification/
 def multi_label_metrics(predictions, true_labels, labels=[], tasks=None, writer=None):
     ## We assume that the main task is the first task, in case of multitasking...
-    # y_true = true_labels[0] if isinstance(true_labels, tuple) else true_labels
-    y_true, y_true_stance = true_labels
+    y_true = true_labels[0] if isinstance(true_labels, tuple) else true_labels
+    # y_true, y_true_stance = true_labels
 
     y_pred = torch.from_numpy(np.zeros(predictions[0].shape + (len(predictions),)))
     task_metrics = {}

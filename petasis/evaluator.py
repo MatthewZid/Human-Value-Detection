@@ -20,15 +20,26 @@ argparser.add_argument(
 args = argparser.parse_args()
 
 # availableValues = [ "Self-direction: thought", "Self-direction: action", "Stimulation", "Hedonism", "Achievement", "Power: dominance", "Power: resources", "Face", "Security: personal", "Security: societal", "Tradition", "Conformity: rules", "Conformity: interpersonal", "Humility", "Benevolence: caring", "Benevolence: dependability", "Universalism: concern", "Universalism: nature", "Universalism: tolerance", "Universalism: objectivity" ]
-availableValues24 = [
-    "Self-direction: thought attained", "Self-direction: thought constrained", "Self-direction: action attained", "Self-direction: action constrained", 
-    "Stimulation attained", "Stimulation constrained", "Hedonism attained", "Hedonism constrained", "Achievement attained", "Achievement constrained", 
-    "Power: dominance attained", "Power: dominance constrained", "Power: resources attained", "Power: resources constrained", "Face attained", "Face constrained",
-    "Security: personal attained", "Security: personal constrained", "Security: societal attained", "Security: societal constrained", "Tradition attained",
-    "Tradition constrained", "Conformity: rules attained", "Conformity: rules constrained", "Conformity: interpersonal attained", "Conformity: interpersonal constrained",
-    "Humility attained", "Humility constrained", "Benevolence: caring attained", "Benevolence: caring constrained", "Benevolence: dependability attained",
-    "Benevolence: dependability constrained", "Universalism: concern attained", "Universalism: concern constrained", "Universalism: nature attained",
-    "Universalism: nature constrained", "Universalism: tolerance attained", "Universalism: tolerance constrained"
+# availableValues24 = [
+#     "Self-direction: thought attained", "Self-direction: thought constrained", "Self-direction: action attained", "Self-direction: action constrained", 
+#     "Stimulation attained", "Stimulation constrained", "Hedonism attained", "Hedonism constrained", "Achievement attained", "Achievement constrained", 
+#     "Power: dominance attained", "Power: dominance constrained", "Power: resources attained", "Power: resources constrained", "Face attained", "Face constrained",
+#     "Security: personal attained", "Security: personal constrained", "Security: societal attained", "Security: societal constrained", "Tradition attained",
+#     "Tradition constrained", "Conformity: rules attained", "Conformity: rules constrained", "Conformity: interpersonal attained", "Conformity: interpersonal constrained",
+#     "Humility attained", "Humility constrained", "Benevolence: caring attained", "Benevolence: caring constrained", "Benevolence: dependability attained",
+#     "Benevolence: dependability constrained", "Universalism: concern attained", "Universalism: concern constrained", "Universalism: nature attained",
+#     "Universalism: nature constrained", "Universalism: tolerance attained", "Universalism: tolerance constrained"
+# ]
+
+availableValues24_subtask1 = [
+    "Self-direction: thought", "Self-direction: action",
+    "Stimulation", "Hedonism", "Achievement",
+    "Power: dominance", "Power: resources", "Face",
+    "Security: personal", "Security: societal", "Tradition",
+    "Conformity: rules", "Conformity: interpersonal",
+    "Humility", "Benevolence: caring", "Benevolence: dependability",
+    "Universalism: concern", "Universalism: nature",
+    "Universalism: tolerance"
 ]
 
 availableMetadata = ['Text-ID', 'Sentence-ID']
@@ -47,8 +58,8 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
                         continue
                     invalidFieldNames = False
                     for fieldName in reader.fieldnames:
-                        if fieldName not in availableMetadata and fieldName not in availableValues24:
-                            print("Skipping file " + labelsFileName + " due to invalid field '" + fieldName + "'; available field names: " + str(availableValues24))
+                        if fieldName not in availableMetadata and fieldName not in availableValues24_subtask1:
+                            print("Skipping file " + labelsFileName + " due to invalid field '" + fieldName + "'; available field names: " + str(availableValues24_subtask1))
                             invalidFieldNames = True
                     if invalidFieldNames:
                         continue
@@ -67,7 +78,7 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
                             continue
                         del row["Sentence-ID"]
                         for label in row.values():
-                            if label != "0.0" and label != "1.0":
+                            if label != "0" and label != "1":
                                 print("Skipping line " + str(lineNumber) + " due to invalid label '" + label + "'")
                                 continue
                         labels[textId] = row
@@ -80,7 +91,7 @@ def readLabels(directory, prefix = None, availableArgumentIds = None):
 
 def initializeCounter():
     counter = {}
-    for value in availableValues24:
+    for value in availableValues24_subtask1:
         counter[value] = 0
     return counter
 
@@ -112,7 +123,7 @@ def writeEvaluation(truthLabels, runLabels, outputDataset):
         precisions = []
         recalls = []
         fmeasures = []
-        for value in availableValues24:
+        for value in availableValues24_subtask1:
             if relevants[value] != 0:
                 precision = 0
                 if positives[value] != 0:
@@ -132,8 +143,8 @@ def writeEvaluation(truthLabels, runLabels, outputDataset):
         evaluationFile.write("measure {\n key: \"Precision\"\n value: \"" + str(precision) + "\"\n}\n")
         evaluationFile.write("measure {\n key: \"Recall\"\n value: \"" + str(recall) + "\"\n}\n")
         skippedValues = 0
-        for v in range(len(availableValues24)):
-            value = availableValues24[v]
+        for v in range(len(availableValues24_subtask1)):
+            value = availableValues24_subtask1[v]
             if relevants[value] == 0:
                 skippedValues += 1
             else:
